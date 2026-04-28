@@ -1,10 +1,9 @@
-ARG BUILD_FROM=ubuntu:22.04
 ARG FREERDP_VERSION=2.11.7
 ARG GUACAMOLE_VERSION=1.5.5
 
 # =============================================================================
 # Stage 1: Build FreeRDP 2.11 from source
-# Only what's needed for guacd's RDP client (no X11/Wayland frontends)
+# Full feature set so the protocol negotiation works correctly
 # =============================================================================
 FROM ubuntu:22.04 AS freerdp-builder
 
@@ -12,17 +11,45 @@ ARG FREERDP_VERSION
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Full set of build deps that the official Ubuntu freerdp2 package uses.
+# libavresample-dev is removed (no longer in 22.04 since FFmpeg 5).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     ninja-build \
+    git \
     curl \
     ca-certificates \
     pkg-config \
     libssl-dev \
+    libx11-dev \
+    libxext-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxdamage-dev \
+    libxv-dev \
     libxkbfile-dev \
+    libasound2-dev \
+    libcups2-dev \
+    libxml2-dev \
+    libxrandr-dev \
+    libpulse-dev \
     libssh2-1-dev \
+    libusb-1.0-0-dev \
+    libudev-dev \
+    libdbus-glib-1-dev \
     uuid-dev \
+    libxtst-dev \
+    libavutil-dev \
+    libavcodec-dev \
+    libswscale-dev \
+    libswresample-dev \
+    libfaad-dev \
+    libgsm1-dev \
+    libfreetype-dev \
+    libfontconfig-dev \
+    libxi-dev \
+    libxfixes-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -34,7 +61,8 @@ RUN curl -fsSL "https://github.com/FreeRDP/FreeRDP/archive/refs/tags/${FREERDP_V
 
 WORKDIR /build/freerdp/build
 
-# Minimal FreeRDP build for guacd: no client UIs, no server, no proxy
+# Standard FreeRDP build with all client channels enabled.
+# Only disable server/proxy/sample components we don't need.
 RUN cmake -GNinja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_INSTALL_PREFIX=/opt/freerdp \
@@ -43,18 +71,19 @@ RUN cmake -GNinja \
     -DWITH_SHADOW=OFF \
     -DWITH_PROXY=OFF \
     -DWITH_SAMPLE=OFF \
-    -DWITH_CLIENT=ON \
-    -DWITH_CLIENT_SDL=OFF \
-    -DWITH_X11=OFF \
+    -DWITH_X11=ON \
     -DWITH_WAYLAND=OFF \
-    -DWITH_PULSE=OFF \
-    -DWITH_ALSA=OFF \
-    -DWITH_CUPS=OFF \
-    -DWITH_FFMPEG=OFF \
-    -DWITH_SWSCALE=OFF \
-    -DCHANNEL_URBDRC=OFF \
+    -DWITH_PULSE=ON \
+    -DWITH_ALSA=ON \
+    -DWITH_CUPS=ON \
+    -DWITH_FFMPEG=ON \
+    -DWITH_SWSCALE=ON \
+    -DWITH_GSM=ON \
+    -DWITH_FAAD2=ON \
+    -DWITH_OPENH264=OFF \
     -DBUILD_TESTING=OFF \
-    -DUSE_UNWIND=OFF \
+    -DWITH_MANPAGES=OFF \
+    -DCHANNEL_URBDRC=OFF \
     .. \
     && ninja \
     && ninja install
@@ -112,10 +141,11 @@ RUN curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/s
 
 WORKDIR /build/guacd
 
+# Important: install guac-common-svc and other FreeRDP plugins INTO the
+# FreeRDP plugin directory so FreeRDP can load them at runtime.
 RUN ./configure \
         --prefix=/opt/guacamole \
-        --with-freerdp-plugin-dir=/opt/guacamole/lib/freerdp2 \
-        --with-init-dir= \
+        --with-freerdp-plugin-dir=/opt/freerdp/lib/freerdp2 \
     && make -j"$(nproc)" \
     && make install
 
@@ -128,7 +158,7 @@ ARG GUACAMOLE_VERSION
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Runtime dependencies (no -dev/build packages)
+# Runtime dependencies (all the libraries FreeRDP and guacd link against)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openjdk-17-jre-headless \
     postgresql-14 \
@@ -149,6 +179,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libavformat58 \
     libavutil56 \
     libswscale5 \
+    libswresample3 \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libssh2-1 \
@@ -161,14 +192,35 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvorbisenc2 \
     libvorbisfile3 \
     libwebp7 \
+    libx11-6 \
+    libxext6 \
+    libxinerama1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxv1 \
     libxkbfile1 \
+    libxrandr2 \
+    libxtst6 \
+    libxi6 \
+    libxfixes3 \
+    libcups2 \
+    libasound2 \
+    libxml2 \
+    libusb-1.0-0 \
+    libudev1 \
+    libdbus-glib-1-2 \
+    libfaad2 \
+    libgsm1 \
+    libfreetype6 \
+    libfontconfig1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy FreeRDP 2.11 from stage 1
+# Copy FreeRDP 2.11 from stage 1 (includes plugin dir at /opt/freerdp/lib/freerdp2)
 COPY --from=freerdp-builder /opt/freerdp /opt/freerdp
 
-# Copy guacd from stage 2
+# Copy guacd from stage 2 (the freerdp plugins were installed into /opt/freerdp/lib/freerdp2)
 COPY --from=guacd-builder /opt/guacamole /opt/guacamole
+COPY --from=guacd-builder /opt/freerdp/lib/freerdp2 /opt/freerdp/lib/freerdp2
 
 # Make libraries findable
 RUN echo "/opt/freerdp/lib" > /etc/ld.so.conf.d/freerdp.conf \
