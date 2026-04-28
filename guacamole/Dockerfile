@@ -263,12 +263,13 @@ RUN curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/b
 RUN curl -fsSL "https://jdbc.postgresql.org/download/postgresql-42.7.3.jar" \
         -o ${GUACAMOLE_HOME}/lib/postgresql-jdbc.jar
 
-# TOTP (2FA) extension
-RUN curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/binary/guacamole-auth-totp-${GUACAMOLE_VERSION}.tar.gz" \
+# TOTP (2FA) extension - bundled but only activated when totp_enabled=true
+RUN mkdir -p /opt/guacamole-bundled \
+    && curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/binary/guacamole-auth-totp-${GUACAMOLE_VERSION}.tar.gz" \
         -o /tmp/totp.tar.gz \
     && mkdir -p /tmp/totp \
     && tar -xzf /tmp/totp.tar.gz -C /tmp/totp --strip-components=1 \
-    && cp /tmp/totp/guacamole-auth-totp-*.jar ${GUACAMOLE_HOME}/extensions/ \
+    && cp /tmp/totp/guacamole-auth-totp-*.jar /opt/guacamole-bundled/ \
     && rm -rf /tmp/totp /tmp/totp.tar.gz
 
 # guacd home directory (FreeRDP fix from GUACAMOLE-2092)

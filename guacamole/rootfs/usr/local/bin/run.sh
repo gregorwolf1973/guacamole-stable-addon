@@ -99,7 +99,32 @@ EOSQL
 fi
 
 # -----------------------------------------------------------------------------
-# 4. Generate guacamole.properties
+# 4. Manage TOTP extension based on config
+# -----------------------------------------------------------------------------
+TOTP_JAR_BUNDLED="/opt/guacamole-bundled/guacamole-auth-totp-1.5.5.jar"
+TOTP_JAR_ACTIVE="/etc/guacamole/extensions/guacamole-auth-totp-1.5.5.jar"
+
+if [ "${TOTP_ENABLED}" = "true" ]; then
+    if [ ! -f "${TOTP_JAR_ACTIVE}" ] && [ -f "${TOTP_JAR_BUNDLED}" ]; then
+        echo "[config] Activating TOTP extension..."
+        cp "${TOTP_JAR_BUNDLED}" "${TOTP_JAR_ACTIVE}"
+    fi
+    
+    # Clean up TOTP enrollment data if user wants a fresh start
+    # (not done automatically - user must enable totp_reset option if needed)
+else
+    if [ -f "${TOTP_JAR_ACTIVE}" ]; then
+        echo "[config] Deactivating TOTP extension..."
+        rm -f "${TOTP_JAR_ACTIVE}"
+        # Clean up TOTP enrollment data so users can login with password only
+        sudo -u postgres psql -h /tmp -d guacamole_db -c \
+            "DELETE FROM guacamole_user_attribute WHERE attribute_name LIKE 'guac-totp-%';" \
+            >/dev/null 2>&1 || true
+    fi
+fi
+
+# -----------------------------------------------------------------------------
+# 5. Generate guacamole.properties
 # -----------------------------------------------------------------------------
 echo "[config] Writing guacamole.properties..."
 cat > /etc/guacamole/guacamole.properties <<EOF
@@ -130,7 +155,7 @@ EOF
 fi
 
 # -----------------------------------------------------------------------------
-# 5. Start guacd in background
+# 6. Start guacd in background
 # -----------------------------------------------------------------------------
 echo "[guacd] Starting guacd 1.5.5 with FreeRDP 2.11..."
 LD_LIBRARY_PATH=/opt/freerdp/lib:/opt/guacamole/lib \
@@ -147,7 +172,7 @@ for i in $(seq 1 15); do
 done
 
 # -----------------------------------------------------------------------------
-# 6. Graceful shutdown handler
+# 7. Graceful shutdown handler
 # -----------------------------------------------------------------------------
 shutdown_handler() {
     echo "[shutdown] Stopping services..."
@@ -159,7 +184,7 @@ shutdown_handler() {
 trap shutdown_handler SIGTERM SIGINT
 
 # -----------------------------------------------------------------------------
-# 7. Start Tomcat (foreground)
+# 8. Start Tomcat (foreground)
 # -----------------------------------------------------------------------------
 echo "[tomcat] Starting Tomcat with Guacamole webapp..."
 export JAVA_OPTS="-Xms256m -Xmx512m"

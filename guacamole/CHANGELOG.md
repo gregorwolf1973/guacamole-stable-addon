@@ -32,3 +32,11 @@
 - TOTP (2FA) support via guacamole-auth-totp extension
 - New option `totp_enabled` (true/false) in Add-on configuration
 - When enabled: users must enroll their TOTP app (Google Authenticator, Aegis, etc.) on first login
+
+## 1.0.4 - 2026-04-28
+
+### Fixed
+- TOTP extension is now properly enabled/disabled based on `totp_enabled` option
+- Previously the JAR was always loaded regardless of the config setting, locking out users when disabled
+- TOTP JAR is now bundled in `/opt/guacamole-bundled/` and copied to active extensions folder only when enabled
+- When `totp_enabled` is set to `false`, all `guac-totp-*` user attributes are cleaned from the database, allowing password-only login
