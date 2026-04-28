@@ -25,3 +25,10 @@
 - FreeRDP build now uses full feature set (X11, PulseAudio, ALSA, CUPS, FFmpeg, GSM, FAAD2)
 - Previous minimal build sent malformed RDP packets (TLS Client Hello without preceding X.224 CR-TPDU)
 - guacd's FreeRDP plugins (guac-common-svc, guacai, etc.) now installed into `/opt/freerdp/lib/freerdp2/` so FreeRDP can load them at runtime
+
+## 1.0.3 - 2026-04-28
+
+### Added
+- TOTP (2FA) support via guacamole-auth-totp extension
+- New option `totp_enabled` (true/false) in Add-on configuration
+- When enabled: users must enroll their TOTP app (Google Authenticator, Aegis, etc.) on first login

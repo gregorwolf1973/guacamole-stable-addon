@@ -7,15 +7,18 @@ CONFIG_PATH=/data/options.json
 if [ -f "${CONFIG_PATH}" ]; then
     LOG_LEVEL=$(jq -r '.log_level // "info"' ${CONFIG_PATH})
     GUACADMIN_PASSWORD=$(jq -r '.guacadmin_password // "guacadmin"' ${CONFIG_PATH})
+    TOTP_ENABLED=$(jq -r '.totp_enabled // "false"' ${CONFIG_PATH})
 else
     LOG_LEVEL="info"
     GUACADMIN_PASSWORD="guacadmin"
+    TOTP_ENABLED="false"
 fi
 
 echo "============================================================"
 echo "  Guacamole Stable - Apache Guacamole 1.5.5 + FreeRDP 2.11"
 echo "============================================================"
 echo "  Log level: ${LOG_LEVEL}"
+echo "  TOTP (2FA): ${TOTP_ENABLED}"
 echo "  Architecture: $(uname -m)"
 echo "============================================================"
 
@@ -112,6 +115,19 @@ postgresql-username: guacamole_user
 postgresql-password: guacamole_pass
 postgresql-auto-create-accounts: false
 EOF
+
+# Add TOTP config if enabled
+if [ "${TOTP_ENABLED}" = "true" ]; then
+    echo "[config] TOTP (2FA) enabled"
+    cat >> /etc/guacamole/guacamole.properties <<EOF
+
+# TOTP 2FA
+totp-issuer: Guacamole
+totp-digits: 6
+totp-period: 30
+totp-mode: sha1
+EOF
+fi
 
 # -----------------------------------------------------------------------------
 # 5. Start guacd in background
