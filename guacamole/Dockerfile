@@ -4,6 +4,7 @@ ARG GUACAMOLE_VERSION=1.5.5
 
 # =============================================================================
 # Stage 1: Build FreeRDP 2.11 from source
+# Only what's needed for guacd's RDP client (no X11/Wayland frontends)
 # =============================================================================
 FROM ubuntu:22.04 AS freerdp-builder
 
@@ -15,35 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     ninja-build \
-    git \
     curl \
     ca-certificates \
     pkg-config \
     libssl-dev \
-    libx11-dev \
-    libxext-dev \
-    libxinerama-dev \
-    libxcursor-dev \
-    libxdamage-dev \
-    libxv-dev \
     libxkbfile-dev \
-    libasound2-dev \
-    libcups2-dev \
-    libxml2-dev \
-    libxrandr-dev \
-    libgstreamer1.0-dev \
-    libgstreamer-plugins-base1.0-dev \
-    libpulse-dev \
     libssh2-1-dev \
-    libusb-1.0-0-dev \
-    libudev-dev \
-    libdbus-glib-1-dev \
     uuid-dev \
-    libxtst-dev \
-    libavutil-dev \
-    libavcodec-dev \
-    libavresample-dev \
-    libwebkit2gtk-4.0-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -55,6 +34,7 @@ RUN curl -fsSL "https://github.com/FreeRDP/FreeRDP/archive/refs/tags/${FREERDP_V
 
 WORKDIR /build/freerdp/build
 
+# Minimal FreeRDP build for guacd: no client UIs, no server, no proxy
 RUN cmake -GNinja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_INSTALL_PREFIX=/opt/freerdp \
@@ -63,15 +43,18 @@ RUN cmake -GNinja \
     -DWITH_SHADOW=OFF \
     -DWITH_PROXY=OFF \
     -DWITH_SAMPLE=OFF \
-    -DWITH_X11=ON \
+    -DWITH_CLIENT=ON \
+    -DWITH_CLIENT_SDL=OFF \
+    -DWITH_X11=OFF \
     -DWITH_WAYLAND=OFF \
-    -DWITH_PULSE=ON \
-    -DWITH_ALSA=ON \
-    -DWITH_CUPS=ON \
-    -DWITH_FFMPEG=ON \
+    -DWITH_PULSE=OFF \
+    -DWITH_ALSA=OFF \
+    -DWITH_CUPS=OFF \
+    -DWITH_FFMPEG=OFF \
     -DWITH_SWSCALE=OFF \
     -DCHANNEL_URBDRC=OFF \
     -DBUILD_TESTING=OFF \
+    -DUSE_UNWIND=OFF \
     .. \
     && ninja \
     && ninja install
@@ -90,13 +73,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     autoconf \
     automake \
     libtool \
+    libtool-bin \
     pkg-config \
     curl \
     ca-certificates \
     libcairo2-dev \
     libjpeg-turbo8-dev \
     libpng-dev \
-    libtool-bin \
     libossp-uuid-dev \
     libavcodec-dev \
     libavformat-dev \
@@ -116,10 +99,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy FreeRDP from stage 1
 COPY --from=freerdp-builder /opt/freerdp /opt/freerdp
 
-# Make FreeRDP findable by pkg-config and ld
-ENV PKG_CONFIG_PATH=/opt/freerdp/lib/pkgconfig:${PKG_CONFIG_PATH}
-ENV LD_LIBRARY_PATH=/opt/freerdp/lib:${LD_LIBRARY_PATH}
-ENV CPATH=/opt/freerdp/include/freerdp2:/opt/freerdp/include/winpr2:${CPATH}
+# Make FreeRDP findable by pkg-config and the linker during build
+ENV PKG_CONFIG_PATH=/opt/freerdp/lib/pkgconfig
+ENV LD_LIBRARY_PATH=/opt/freerdp/lib
 
 WORKDIR /build
 
@@ -131,10 +113,10 @@ RUN curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/s
 WORKDIR /build/guacd
 
 RUN ./configure \
-    --prefix=/opt/guacamole \
-    --with-freerdp-plugin-dir=/opt/guacamole/lib/freerdp2 \
-    --with-init-dir= \
-    && make -j$(nproc) \
+        --prefix=/opt/guacamole \
+        --with-freerdp-plugin-dir=/opt/guacamole/lib/freerdp2 \
+        --with-init-dir= \
+    && make -j"$(nproc)" \
     && make install
 
 # =============================================================================
@@ -146,7 +128,7 @@ ARG GUACAMOLE_VERSION
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies (no build tools)
+# Runtime dependencies (no -dev/build packages)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openjdk-17-jre-headless \
     postgresql-14 \
@@ -179,22 +161,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvorbisenc2 \
     libvorbisfile3 \
     libwebp7 \
-    libx11-6 \
-    libxext6 \
-    libxinerama1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxv1 \
     libxkbfile1 \
-    libxrandr2 \
-    libxtst6 \
-    libcups2 \
-    libasound2 \
-    libgstreamer1.0-0 \
-    libgstreamer-plugins-base1.0-0 \
-    libusb-1.0-0 \
-    libudev1 \
-    libdbus-glib-1-2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy FreeRDP 2.11 from stage 1
@@ -228,17 +195,15 @@ RUN curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/b
         -o ${CATALINA_HOME}/webapps/ROOT.war \
     && chown tomcat:tomcat ${CATALINA_HOME}/webapps/ROOT.war
 
-# Setup Guacamole config directory and download PostgreSQL JDBC + auth extension
+# Setup Guacamole config directory and JDBC auth extension
 ENV GUACAMOLE_HOME=/etc/guacamole
-RUN mkdir -p ${GUACAMOLE_HOME}/extensions ${GUACAMOLE_HOME}/lib
+RUN mkdir -p ${GUACAMOLE_HOME}/extensions ${GUACAMOLE_HOME}/lib /opt/guacamole-schema
 
-# JDBC auth extension
 RUN curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/binary/guacamole-auth-jdbc-${GUACAMOLE_VERSION}.tar.gz" \
         -o /tmp/jdbc.tar.gz \
     && mkdir -p /tmp/jdbc \
     && tar -xzf /tmp/jdbc.tar.gz -C /tmp/jdbc --strip-components=1 \
     && cp /tmp/jdbc/postgresql/guacamole-auth-jdbc-postgresql-*.jar ${GUACAMOLE_HOME}/extensions/ \
-    && mkdir -p /opt/guacamole-schema \
     && cp /tmp/jdbc/postgresql/schema/*.sql /opt/guacamole-schema/ \
     && rm -rf /tmp/jdbc /tmp/jdbc.tar.gz
 

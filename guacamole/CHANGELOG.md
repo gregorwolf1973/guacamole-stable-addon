@@ -11,3 +11,10 @@
 - PostgreSQL 14 embedded
 - Home Assistant Ingress support
 - Multi-architecture: aarch64, amd64
+
+## 1.0.1 - 2026-04-28
+
+### Fixed
+- Build error: removed `libavresample-dev` (no longer in Ubuntu 22.04 since FFmpeg 5.0)
+- Reduced FreeRDP build dependencies to minimum needed for guacd (no X11/Wayland frontends)
+- FreeRDP now builds without X11/PulseAudio/ALSA/CUPS/FFmpeg — guacd does not need them
