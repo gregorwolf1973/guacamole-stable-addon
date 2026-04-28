@@ -1,0 +1,8 @@
+build_from:
+  aarch64: ubuntu:22.04
+  amd64: ubuntu:22.04
+labels:
+  org.opencontainers.image.title: "Guacamole Stable"
+  org.opencontainers.image.description: "Apache Guacamole 1.5.5 with FreeRDP 2.11 from source"
+  org.opencontainers.image.source: "https://github.com/gregorwolf1973/guacamole-stable-addon"
+  org.opencontainers.image.licenses: "Apache-2.0"
