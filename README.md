@@ -1,0 +1,1 @@
+# guacamole-stable-addon
