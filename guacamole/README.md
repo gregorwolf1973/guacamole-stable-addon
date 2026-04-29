@@ -2,13 +2,6 @@
 
 Apache Guacamole 1.5.5 als Home Assistant Add-on mit selbst kompilierter **FreeRDP 2.11** – behebt RDP-Verbindungsprobleme zu xrdp-Servern.
 
-## Warum dieses Addon?
-
-Die offizielle Version 1.6.0 sowie das beliebte alexbelgium-Addon haben Bugs:
-
-- **GUACAMOLE-2092**: FreeRDP-Initialisierung scheitert wegen fehlendem Home-Verzeichnis
-- **FreeRDP 2.6.1** (Ubuntu 22.04 Standard-Paket): `ignore-cert` Option wird nicht respektiert; Verbindungen zu xrdp-Servern enden mit "SSL/TLS connection failed"
-
 Dieses Addon kompiliert FreeRDP **2.11.7** und guacamole-server **1.5.5** komplett aus dem Source-Code.
 
 ## Features
