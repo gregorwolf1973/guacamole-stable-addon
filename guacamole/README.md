@@ -2,13 +2,14 @@
 
 Apache Guacamole 1.5.5 als Home Assistant Add-on mit selbst kompilierter **FreeRDP 2.11** – behebt RDP-Verbindungsprobleme zu xrdp-Servern.
 
-Dieses Addon kompiliert FreeRDP **2.11.7** und guacamole-server **1.5.5** komplett aus dem Source-Code.
+Dieses Addon kompiliert FreeRDP **2.11.8** und guacamole-server **1.5.5** komplett aus dem Source-Code.
 
 ## Features
 
 - Apache Guacamole 1.5.5 Web-Client (HTML5)
 - guacd 1.5.5, gegen FreeRDP 2.11 gelinkt
 - Tomcat 9 + PostgreSQL 14 embedded
+- Optional: Zwei-Faktor-Authentifizierung (TOTP)
 - Home Assistant Ingress: Zugriff direkt aus der HA Sidebar
 - Persistente Daten in `/data/postgres`
 - ARM64 (Raspberry Pi 5) und AMD64
@@ -29,9 +30,12 @@ Dieses Addon kompiliert FreeRDP **2.11.7** und guacamole-server **1.5.5** komple
 ```yaml
 log_level: info           # trace, debug, info, warning, error
 guacadmin_password: ...   # nur beim ersten Start angewendet
+totp_enabled: false       # Zwei-Faktor-Authentifizierung (TOTP) aktivieren
 ```
 
 Das `guacadmin_password` wird nur bei der **Erstinitialisierung** angewendet (DB-Erstellung). Danach kannst du es über die Web-UI ändern.
+
+Mit `totp_enabled: true` wird die Guacamole-TOTP-Erweiterung aktiviert: Jeder Benutzer muss beim nächsten Login eine Authenticator-App (Google Authenticator, Aegis, …) registrieren. Wird die Option wieder auf `false` gesetzt, werden die TOTP-Registrierungen aller Benutzer gelöscht und der Login funktioniert wieder nur mit Passwort.
 
 ## Verbindung zu Linux/xrdp einrichten
 

@@ -41,6 +41,9 @@ EOF
     NEEDS_DB_SETUP=1
 else
     echo "[init] Existing PostgreSQL data found at ${PGDATA}"
+    # Make sure ownership/permissions are correct (e.g. after a backup restore)
+    chown -R postgres:postgres "${PGDATA}"
+    chmod 700 "${PGDATA}"
     NEEDS_DB_SETUP=0
 fi
 
@@ -174,20 +177,40 @@ done
 # -----------------------------------------------------------------------------
 # 7. Graceful shutdown handler
 # -----------------------------------------------------------------------------
+TOMCAT_PID=""
 shutdown_handler() {
     echo "[shutdown] Stopping services..."
-    "${CATALINA_HOME}/bin/catalina.sh" stop 2>/dev/null || true
-    kill "${GUACD_PID}" 2>/dev/null || true
-    sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D "${PGDATA}" -m fast stop || true
+    trap - SIGTERM SIGINT
+    if [ -n "${TOMCAT_PID}" ]; then
+        kill -TERM "${TOMCAT_PID}" 2>/dev/null || true
+        wait "${TOMCAT_PID}" 2>/dev/null || true
+    fi
+    kill -TERM "${GUACD_PID}" 2>/dev/null || true
+    wait "${GUACD_PID}" 2>/dev/null || true
+    sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D "${PGDATA}" -m fast -w stop || true
+    echo "[shutdown] Done."
     exit 0
 }
 trap shutdown_handler SIGTERM SIGINT
 
 # -----------------------------------------------------------------------------
-# 8. Start Tomcat (foreground)
+# 8. Start Tomcat
 # -----------------------------------------------------------------------------
+# Tomcat is started in the background and waited for (instead of exec) so the
+# shutdown handler above actually runs on SIGTERM and can stop guacd and
+# PostgreSQL cleanly.
 echo "[tomcat] Starting Tomcat with Guacamole webapp..."
 export JAVA_OPTS="-Xms256m -Xmx512m"
 export GUACAMOLE_HOME=/etc/guacamole
 
-exec "${CATALINA_HOME}/bin/catalina.sh" run
+"${CATALINA_HOME}/bin/catalina.sh" run &
+TOMCAT_PID=$!
+
+# Wait for Tomcat; if it exits on its own, shut the other services down too.
+set +e
+wait "${TOMCAT_PID}"
+TOMCAT_EXIT=$?
+set -e
+echo "[tomcat] Tomcat exited with code ${TOMCAT_EXIT}"
+TOMCAT_PID=""
+shutdown_handler

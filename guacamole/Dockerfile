@@ -1,4 +1,4 @@
-ARG FREERDP_VERSION=2.11.7
+ARG FREERDP_VERSION=2.11.8
 ARG GUACAMOLE_VERSION=1.5.5
 
 # =============================================================================
@@ -231,7 +231,7 @@ RUN echo "/opt/freerdp/lib" > /etc/ld.so.conf.d/freerdp.conf \
 RUN ln -s /opt/guacamole/sbin/guacd /usr/local/sbin/guacd
 
 # Install Tomcat 9
-ENV TOMCAT_VERSION=9.0.99
+ENV TOMCAT_VERSION=9.0.121
 ENV CATALINA_HOME=/opt/tomcat
 RUN curl -fsSL "https://archive.apache.org/dist/tomcat/tomcat-9/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz" -o /tmp/tomcat.tar.gz \
     && mkdir -p ${CATALINA_HOME} \
@@ -260,7 +260,7 @@ RUN curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/b
     && rm -rf /tmp/jdbc /tmp/jdbc.tar.gz
 
 # PostgreSQL JDBC driver
-RUN curl -fsSL "https://jdbc.postgresql.org/download/postgresql-42.7.3.jar" \
+RUN curl -fsSL "https://jdbc.postgresql.org/download/postgresql-42.7.13.jar" \
         -o ${GUACAMOLE_HOME}/lib/postgresql-jdbc.jar
 
 # TOTP (2FA) extension - bundled but only activated when totp_enabled=true
