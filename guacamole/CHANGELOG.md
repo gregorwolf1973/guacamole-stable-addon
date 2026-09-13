@@ -56,3 +56,12 @@
 
 ### Docs
 - README: Option `totp_enabled` dokumentiert.
+
+## 1.0.6 - 2026-09-13
+
+### Fixed
+- Build repariert. FreeRDP 2.11.8 wird von guacd abgelehnt: dessen configure
+  erkennt die Quelle als Entwicklungsversion und bricht mit
+  "PLEASE USE A RELEASED VERSION OF FREERDP" ab. FreeRDP bleibt daher bei
+  2.11.7. Die Updates von Tomcat (9.0.121) und PostgreSQL-JDBC (42.7.13)
+  sowie das saubere Herunterfahren aus 1.0.5 bleiben erhalten.

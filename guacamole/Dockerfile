@@ -1,4 +1,4 @@
-ARG FREERDP_VERSION=2.11.8
+ARG FREERDP_VERSION=2.11.7
 ARG GUACAMOLE_VERSION=1.5.5
 
 # =============================================================================
