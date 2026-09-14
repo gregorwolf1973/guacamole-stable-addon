@@ -18,7 +18,7 @@ Dieses Addon kompiliert FreeRDP **2.11.7** und guacamole-server **1.5.5** komple
 
 ## Installation
 
-1. **Settings → Add-ons → Add-on Store → ⋮ → Repositories**
+1. **Einstellungen → Apps → App installieren → ⋮ → Repositories**
 2. Repository-URL hinzufügen:
    ```
    https://github.com/gregorwolf1973/guacamole-stable-addon
@@ -66,6 +66,15 @@ Mit `totp_enabled: true` wird die Guacamole-TOTP-Erweiterung aktiviert: Jeder Be
 ## Daten-Persistenz
 
 Alle Daten (Verbindungen, Nutzer, Settings) liegen in PostgreSQL unter `/data/postgres` und überleben Add-on-Restarts und Updates.
+
+## Zugriff auf `/share`
+
+Das Add-on bindet den Home-Assistant-Ordner **`/share` mit Schreibrechten** ein (`map: share:rw`). Das Add-on selbst legt dort nichts an – die Freigabe ist für Guacamole-Verbindungen gedacht, die Pfade im Dateisystem des Add-ons brauchen:
+
+- **Laufwerksweiterleitung** (RDP, Option „Laufwerk aktivieren" / *Drive Path*), z. B. `/share/guacamole` – hochgeladene bzw. heruntergeladene Dateien landen dann im HA-Share und sind per Samba oder Datei-Editor erreichbar.
+- **Sitzungsaufzeichnungen** (*Recording Path*), z. B. `/share/guacamole/recordings`.
+
+Verzeichnisse unterhalb von `/share` musst du vorher selbst anlegen (Guacamole kann sie optional auch automatisch erstellen lassen). Ohne solche Verbindungseinstellungen wird `/share` nicht genutzt.
 
 ## Lizenz
 
