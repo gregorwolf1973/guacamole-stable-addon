@@ -1,5 +1,7 @@
 # Gregor's Guacamole Stable Add-ons
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973)
+
 Home Assistant Add-on Repository für eine stabile Apache Guacamole Installation.
 
 ## Installation

@@ -1,8 +1,10 @@
 # Guacamole Stable
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973)
+
 Apache Guacamole 1.5.5 als Home Assistant Add-on mit selbst kompilierter **FreeRDP 2.11** – behebt RDP-Verbindungsprobleme zu xrdp-Servern.
 
-Dieses Addon kompiliert FreeRDP **2.11.8** und guacamole-server **1.5.5** komplett aus dem Source-Code.
+Dieses Addon kompiliert FreeRDP **2.11.7** und guacamole-server **1.5.5** komplett aus dem Source-Code.
 
 ## Features
 
