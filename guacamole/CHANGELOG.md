@@ -65,3 +65,10 @@
   "PLEASE USE A RELEASED VERSION OF FREERDP" ab. FreeRDP bleibt daher bei
   2.11.7. Die Updates von Tomcat (9.0.121) und PostgreSQL-JDBC (42.7.13)
   sowie das saubere Herunterfahren aus 1.0.5 bleiben erhalten.
+
+## 1.0.7 - 2026-11-15
+
+### Changed
+- Tomcat 9.0.121 → 9.0.124 und PostgreSQL-JDBC 42.7.13 → 42.7.14
+  (Fehler- und Sicherheitskorrekturen). Guacamole bleibt bewusst bei 1.5.5
+  mit FreeRDP 2.11.7.
