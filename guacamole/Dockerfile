@@ -171,6 +171,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     openssl \
     bash \
+    nginx-light \
     libcairo2 \
     libjpeg-turbo8 \
     libpng16-16 \
@@ -272,6 +273,20 @@ RUN mkdir -p /opt/guacamole-bundled \
     && cp /tmp/totp/guacamole-auth-totp-*.jar /opt/guacamole-bundled/ \
     && rm -rf /tmp/totp /tmp/totp.tar.gz
 
+# Header authentication extension - bundled but only activated when
+# ingress_ohne_anmeldung=true (auto login for HA ingress only)
+RUN curl -fsSL "https://archive.apache.org/dist/guacamole/${GUACAMOLE_VERSION}/binary/guacamole-auth-header-${GUACAMOLE_VERSION}.tar.gz" \
+        -o /tmp/header.tar.gz \
+    && mkdir -p /tmp/header \
+    && tar -xzf /tmp/header.tar.gz -C /tmp/header --strip-components=1 \
+    && cp /tmp/header/guacamole-auth-header-*.jar /opt/guacamole-bundled/ \
+    && rm -rf /tmp/header /tmp/header.tar.gz
+
+# Tomcat only listens on localhost:8081; nginx (8080 direct, 8099 ingress) fronts it
+RUN grep -q '<Connector port="8080"' ${CATALINA_HOME}/conf/server.xml \
+    && sed -i 's|<Connector port="8080"|<Connector port="8081" address="127.0.0.1"|' ${CATALINA_HOME}/conf/server.xml \
+    && grep -q 'port="8081" address="127.0.0.1"' ${CATALINA_HOME}/conf/server.xml
+
 # guacd home directory (FreeRDP fix from GUACAMOLE-2092)
 RUN mkdir -p /var/lib/guacd && chown daemon:daemon /var/lib/guacd
 
@@ -282,6 +297,6 @@ ENV PGDATA=/data/postgres
 COPY rootfs/ /
 RUN chmod +x /usr/local/bin/run.sh
 
-EXPOSE 8080
+EXPOSE 8080 8099
 
 CMD ["/usr/local/bin/run.sh"]

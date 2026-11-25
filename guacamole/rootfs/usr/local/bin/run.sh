@@ -8,10 +8,12 @@ if [ -f "${CONFIG_PATH}" ]; then
     LOG_LEVEL=$(jq -r '.log_level // "info"' ${CONFIG_PATH})
     GUACADMIN_PASSWORD=$(jq -r '.guacadmin_password // "guacadmin"' ${CONFIG_PATH})
     TOTP_ENABLED=$(jq -r '.totp_enabled // "false"' ${CONFIG_PATH})
+    INGRESS_AUTO=$(jq -r 'if .ingress_ohne_anmeldung == false then "false" else "true" end' ${CONFIG_PATH})
 else
     LOG_LEVEL="info"
     GUACADMIN_PASSWORD="guacadmin"
     TOTP_ENABLED="false"
+    INGRESS_AUTO="true"
 fi
 
 echo "============================================================"
@@ -19,6 +21,7 @@ echo "  Guacamole Stable - Apache Guacamole 1.5.5 + FreeRDP 2.11"
 echo "============================================================"
 echo "  Log level: ${LOG_LEVEL}"
 echo "  TOTP (2FA): ${TOTP_ENABLED}"
+echo "  Ingress ohne Anmeldung: ${INGRESS_AUTO}"
 echo "  Architecture: $(uname -m)"
 echo "============================================================"
 
@@ -127,6 +130,28 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# 4b. Header auth extension (auto login for ingress only)
+# -----------------------------------------------------------------------------
+HEADER_JAR_BUNDLED="/opt/guacamole-bundled/guacamole-auth-header-1.5.5.jar"
+HEADER_JAR_ACTIVE="/etc/guacamole/extensions/guacamole-auth-header-1.5.5.jar"
+INGRESS_HEADER="X-Guac-Ingress-User"
+
+if [ "${INGRESS_AUTO}" = "true" ]; then
+    if [ ! -f "${HEADER_JAR_ACTIVE}" ] && [ -f "${HEADER_JAR_BUNDLED}" ]; then
+        echo "[config] Activating header auth extension (ingress auto login)..."
+        cp "${HEADER_JAR_BUNDLED}" "${HEADER_JAR_ACTIVE}"
+    fi
+    # Only the ingress server (port 8099, restricted to the HA supervisor) sets the header
+    echo "proxy_set_header ${INGRESS_HEADER} guacadmin;" > /etc/guacamole-nginx/ingress-auth.conf
+else
+    if [ -f "${HEADER_JAR_ACTIVE}" ]; then
+        echo "[config] Deactivating header auth extension..."
+        rm -f "${HEADER_JAR_ACTIVE}"
+    fi
+    echo "proxy_set_header ${INGRESS_HEADER} \"\";" > /etc/guacamole-nginx/ingress-auth.conf
+fi
+
+# -----------------------------------------------------------------------------
 # 5. Generate guacamole.properties
 # -----------------------------------------------------------------------------
 echo "[config] Writing guacamole.properties..."
@@ -143,6 +168,16 @@ postgresql-username: guacamole_user
 postgresql-password: guacamole_pass
 postgresql-auto-create-accounts: false
 EOF
+
+# Header auth (ingress auto login) - direct access still shows the login form,
+# because nginx strips this header on port 8080
+if [ "${INGRESS_AUTO}" = "true" ]; then
+    cat >> /etc/guacamole/guacamole.properties <<EOF
+
+# Header authentication (ingress only)
+http-auth-header: ${INGRESS_HEADER}
+EOF
+fi
 
 # Add TOTP config if enabled
 if [ "${TOTP_ENABLED}" = "true" ]; then
@@ -178,9 +213,14 @@ done
 # 7. Graceful shutdown handler
 # -----------------------------------------------------------------------------
 TOMCAT_PID=""
+NGINX_PID=""
 shutdown_handler() {
     echo "[shutdown] Stopping services..."
     trap - SIGTERM SIGINT
+    if [ -n "${NGINX_PID}" ]; then
+        kill -TERM "${NGINX_PID}" 2>/dev/null || true
+        wait "${NGINX_PID}" 2>/dev/null || true
+    fi
     if [ -n "${TOMCAT_PID}" ]; then
         kill -TERM "${TOMCAT_PID}" 2>/dev/null || true
         wait "${TOMCAT_PID}" 2>/dev/null || true
@@ -205,6 +245,15 @@ export GUACAMOLE_HOME=/etc/guacamole
 
 "${CATALINA_HOME}/bin/catalina.sh" run &
 TOMCAT_PID=$!
+
+# -----------------------------------------------------------------------------
+# 9. Start nginx (8080 direct, 8099 ingress) in front of Tomcat (127.0.0.1:8081)
+# -----------------------------------------------------------------------------
+echo "[nginx] Testing configuration..."
+nginx -t -c /etc/guacamole-nginx/nginx.conf
+echo "[nginx] Starting nginx on 8080 (direct) and 8099 (ingress)..."
+nginx -c /etc/guacamole-nginx/nginx.conf &
+NGINX_PID=$!
 
 # Wait for Tomcat; if it exits on its own, shut the other services down too.
 set +e

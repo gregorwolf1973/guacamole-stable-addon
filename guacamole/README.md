@@ -33,11 +33,18 @@ Dieses Addon kompiliert FreeRDP **2.11.7** und guacamole-server **1.5.5** komple
 log_level: info           # trace, debug, info, warning, error
 guacadmin_password: ...   # nur beim ersten Start angewendet
 totp_enabled: false       # Zwei-Faktor-Authentifizierung (TOTP) aktivieren
+ingress_ohne_anmeldung: true  # Seitenleiste meldet automatisch als guacadmin an
 ```
 
 Das `guacadmin_password` wird nur bei der **Erstinitialisierung** angewendet (DB-Erstellung). Danach kannst du es über die Web-UI ändern.
 
 Mit `totp_enabled: true` wird die Guacamole-TOTP-Erweiterung aktiviert: Jeder Benutzer muss beim nächsten Login eine Authenticator-App (Google Authenticator, Aegis, …) registrieren. Wird die Option wieder auf `false` gesetzt, werden die TOTP-Registrierungen aller Benutzer gelöscht und der Login funktioniert wieder nur mit Passwort.
+
+### Automatische Anmeldung über die Seitenleiste (`ingress_ohne_anmeldung`)
+
+Vorgabe `true`: Wer Guacamole über die HA-Seitenleiste (Ingress) öffnet, ist automatisch als `guacadmin` angemeldet. Der direkte Zugang über Port 8080 (z. B. über Reverse-Proxy/Cloudflare) verlangt weiterhin die normale Anmeldung. Technik: nginx im Container, Port 8099 (Ingress, nur vom HA-Supervisor erreichbar) setzt einen Anmelde-Header, Port 8080 löscht ihn; dazu die offizielle Erweiterung `guacamole-auth-header`.
+
+**Risiko:** Jeder, der in Home Assistant Zugriff auf die Seitenleiste hat (Administratoren; Nicht-Admins nur, wenn das Panel für sie freigegeben ist), kommt per Klick auf **alle** Verbindungen von `guacadmin`. Wer das nicht möchte, setzt die Option auf `false`. Ist zusätzlich `totp_enabled` an, fragt Guacamole unter Umständen auch bei Ingress nach dem Code.
 
 ## Verbindung zu Linux/xrdp einrichten
 

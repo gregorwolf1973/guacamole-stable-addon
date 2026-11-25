@@ -72,3 +72,21 @@
 - Tomcat 9.0.121 → 9.0.124 und PostgreSQL-JDBC 42.7.13 → 42.7.14
   (Fehler- und Sicherheitskorrekturen). Guacamole bleibt bewusst bei 1.5.5
   mit FreeRDP 2.11.7.
+
+## 1.1.0 - 2026-11-25
+
+### Added
+- Neue Option `ingress_ohne_anmeldung` (Vorgabe `true`): Der Zugang über die
+  HA-Seitenleiste (Ingress) meldet automatisch als `guacadmin` an. Der direkte
+  Port 8080 verlangt weiterhin die normale Guacamole-Anmeldung.
+- Technik: nginx als Vorschalt-Server. Port 8080 = direkter Zugang (der
+  Anmelde-Header `X-Guac-Ingress-User` wird immer geleert), Port 8099 =
+  Ingress (nur vom HA-Supervisor 172.30.32.2 erreichbar, setzt den Header).
+  Tomcat lauscht nur noch auf 127.0.0.1:8081. Offizielle Erweiterung
+  `guacamole-auth-header` 1.5.5 (`http-auth-header`), nur aktiv bei `true`.
+- `ingress_port` ist jetzt 8099. WebSocket-Tunnel laufen durch nginx.
+
+### Hinweis
+- Mit `totp_enabled: true` kann Guacamole auch beim Ingress-Zugang noch nach
+  dem Code fragen; das ist unkritisch.
+- Wer `ingress_ohne_anmeldung` nicht will, setzt die Option auf `false`.

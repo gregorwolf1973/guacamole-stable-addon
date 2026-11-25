@@ -1,5 +1,5 @@
 name: Guacamole Stable
-version: "1.0.7"
+version: "1.1.0"
 slug: guacamole_stable
 description: Apache Guacamole 1.5.5 mit FreeRDP 2.11 - HTML5 Remote Desktop Gateway (RDP/VNC/SSH)
 url: https://github.com/gregorwolf1973/guacamole-stable-addon
@@ -16,7 +16,7 @@ ports:
 ports_description:
   8080/tcp: Guacamole Web UI
 ingress: true
-ingress_port: 8080
+ingress_port: 8099
 panel_icon: mdi:remote-desktop
 panel_title: Guacamole
 map:
@@ -25,8 +25,10 @@ options:
   log_level: info
   guacadmin_password: guacadmin
   totp_enabled: false
+  ingress_ohne_anmeldung: true
 schema:
   log_level: list(trace|debug|info|warning|error)
   guacadmin_password: str
   totp_enabled: bool
+  ingress_ohne_anmeldung: bool
 image: ghcr.io/gregorwolf1973/guacamole-stable-{arch}
